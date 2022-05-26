@@ -2,39 +2,42 @@
 
 use std::str::FromStr;
 use crate::ast::{Expr, BinOpcode, NumSource};
+use crate::util;
 
 use lalrpop_util::ParseError;
 
-grammar;
+grammar<'input>(input: &'input str);
 
 pub TopLevel: Box<Expr> = {
     Term,
     <Term> ! => Box::new(Expr::BadParse(<>)),
 }
 
-pub Term: Box<Expr> = {
+pub Term: Box<Expr> = Term2;
+
+Term2: Box<Expr> = {
+    Term1,
+    <a:Term2> "*" <b:Term1> => Box::new(Expr::BinOp(BinOpcode::Mul, a, b)),
+}
+
+Term1: Box<Expr> = {
     Val,
-    <a:Term> "+" <b:NumExpr> => Box::new(Expr::BinOp(BinOpcode::Add, a, b)),
+    <a:Term1> "+" <b:Val> => Box::new(Expr::BinOp(BinOpcode::Add, a, b)),
+    <a:Term1> "-" <b:Val> => Box::new(Expr::BinOp(BinOpcode::Sub, a, b)),
     "(" <t:Term> ")" => t,
 };
 
 Val: Box<Expr> = {
     NumExpr,
     NumWordsExpr,
-    <r"[a-zA-Z][a-zA-Z0-9_]*"> => Box::new(Expr::Var(String::from(<>))),
+    Var => Box::new(Expr::Var(String::from(<>))),
 }
 
 NumExpr: Box<Expr> =
-    <Num> => Box::new(Expr::Number(<>, NumSource::Digits));
+    <Digits> => Box::new(Expr::Number(<>, NumSource::Digits));
 
-Num: i64 = <s:r"[0-9]+"> => i64::from_str(s).unwrap();
-
-NumWordsExpr: Box<Expr> = {
-    <NumWords> => Box::new(Expr::Number(
-        <>,
-        NumSource::Words)),
-};
-
+NumWordsExpr: Box<Expr> =
+    <NumWords> => Box::new(Expr::Number(<>, NumSource::Words));
 
 // -- NumWords
 
@@ -83,7 +86,7 @@ BigMagnitude: i64 = {
 }
 
 FullTens: i64 = {
-    <tens:(<Tens>)?> <ones:Digit> => tens.unwrap_or(0) + ones,
+    <tens:Tens?> <ones:Digit> => tens.unwrap_or(0) + ones,
     <tens:Tens> => tens,
     <Teens> => <>,
 }
@@ -95,14 +98,15 @@ pub ThousandsGroup: i64 = {
 
 // Returns the number, and the largest encountered magnitude
 NumWordsGroups: (i64, i64) = {
-    <ts:ThousandsGroup> <mag:(<BigMagnitude>)?> => {
+    <ts:ThousandsGroup> <mag:BigMagnitude?> => {
         let mag1 = mag.unwrap_or(1);
         (ts * mag1, mag1)
     },
     <ts:ThousandsGroup> <mag:BigMagnitude> <rest:NumWordsGroups> =>? {
         let (vrest, magrest) = rest;
         if mag <= magrest {
-            return Err(ParseError::User { error: "Magnitudes must descend" });
+            return Err(ParseError::User
+                       { error: "Magnitudes must descend".to_string() });
         }
         Ok((ts * mag + vrest, mag))
     }
@@ -110,9 +114,57 @@ NumWordsGroups: (i64, i64) = {
 
 pub NumWords: i64 = <NumWordsGroups> => <>.0;
 
-// -- Other
+extern {
+    type Location = usize;
+    type Error = String;
 
-// TODO testing purposes only
-pub MiddleString: &'input str = {
-    "a" <"b"> "c" => <>,
+    enum util::Token<'input> {
+        "+" => util::Token::Plus,
+        "-" => util::Token::Minus,
+        "*" => util::Token::Times,
+
+        "(" => util::Token::LParen,
+        ")" => util::Token::RParen,
+
+        Digits => util::Token::Digits(<i64>),
+        Var => util::Token::Var(<&'input str>),
+
+    // #[error]
+    // #[regex(r"\s+", logos::skip)]
+    // Unknown,
+
+        "zero" => util::Token::Zero,
+        "one" => util::Token::One,
+        "two" => util::Token::Two,
+        "three" => util::Token::Three,
+        "four" => util::Token::Four,
+        "five" => util::Token::Five,
+        "six" => util::Token::Six,
+        "seven" => util::Token::Seven,
+        "eight" => util::Token::Eight,
+        "nine" => util::Token::Nine,
+        "ten" => util::Token::Ten,
+        "eleven" => util::Token::Eleven,
+        "twelve" => util::Token::Twelve,
+        "thirteen" => util::Token::Thirteen,
+        "fourteen" => util::Token::Fourteen,
+        "fifteen" => util::Token::Fifteen,
+        "sixteen" => util::Token::Sixteen,
+        "seventeen" => util::Token::Seventeen,
+        "eighteen" => util::Token::Eighteen,
+        "nineteen" => util::Token::Nineteen,
+        "twenty" => util::Token::Twenty,
+        "thirty" => util::Token::Thirty,
+        "forty" => util::Token::Forty,
+        "fifty" => util::Token::Fifty,
+        "sixty" => util::Token::Sixty,
+        "seventy" => util::Token::Seventy,
+        "eighty" => util::Token::Eighty,
+        "ninety" => util::Token::Ninety,
+        "hundred" => util::Token::Hundred,
+        "thousand" => util::Token::Thousand,
+        "million" => util::Token::Million,
+        "billion" => util::Token::Billion,
+        "trillion" => util::Token::Trillion,
+    }
 }

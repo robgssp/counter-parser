@@ -4,6 +4,7 @@
 lalrpop_mod!(pub grammar);
 mod ast;
 mod eval;
+mod util;
 use ast::*;
 
 
@@ -11,7 +12,10 @@ fn main() {
     // let teststr = "(42)+5";
     let teststr = "1 + 2 3 + 4";
 
-    println!("{:?} -> {:?}", teststr, grammar::TopLevelParser::new().parse(teststr).unwrap());
+    let lexer = util::TokenLexer::new(teststr);
+    println!("{:?} -> {:?}",
+             teststr,
+             grammar::TopLevelParser::new().parse(teststr, lexer).unwrap());
 }
 
 #[cfg(test)]
@@ -29,16 +33,11 @@ mod tests {
         let parser = grammar::TermParser::new();
 
         for (string, num) in cases.iter() {
-            let parse = parser.parse(string);
+            let lexer = util::TokenLexer::new(string);
+            let parse = parser.parse(string, lexer);
             assert!(parse.is_ok(), "Failed to parse {:?}: {:?}", string, parse.err());
             assert_eq!(parse.unwrap(), *num, "String parsed to the wrong expr: {:?}", string);
         }
-    }
-
-
-    #[test]
-    fn test_middle_string() {
-        assert_eq!(grammar::MiddleStringParser::new().parse("a b c").unwrap(), "b");
     }
 
     #[test]
@@ -61,7 +60,8 @@ mod tests {
         let parser = grammar::NumWordsParser::new();
 
         for (string, num) in cases.iter() {
-            let parse = parser.parse(string);
+            let lexer = util::TokenLexer::new(string);
+            let parse = parser.parse(string, lexer);
             assert!(parse.is_ok(), "Failed to parse {:?}: {:?}", string, parse.err());
             assert_eq!(parse.unwrap(), *num, "String parsed to the wrong number: {:?}", string);
         }
@@ -79,7 +79,8 @@ mod tests {
         let parser = grammar::NumWordsParser::new();
 
         for string in cases.iter() {
-            let parse = parser.parse(string);
+            let lexer = util::TokenLexer::new(string);
+            let parse = parser.parse(string, lexer);
             assert!(parse.is_err(), "Parsing {:?} incorrectly succeeded, with {:?}", string, parse.unwrap());
         }
     }
