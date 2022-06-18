@@ -1,0 +1,13 @@
+#+TITLE: Counter Parser
+
+Did you just type a number? you're about to find out!
+
+#+begin_src shell
+
+  # to run over stdin
+  > cargo run -- --stdin
+
+  # to listen on tcp 2369
+  > cargo run
+
+#+end_src
