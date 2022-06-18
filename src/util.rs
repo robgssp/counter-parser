@@ -62,7 +62,7 @@ pub enum Token<'input> {
 // lalrpop takes an Iterator with item = Result<(Loc, Tok, Loc), LexError>
 
 pub struct TokenLexer<'input> {
-    lexer: logos::Lexer<'input, Token<'input>>,
+    pub lexer: logos::Lexer<'input, Token<'input>>,
 }
 
 impl<'input> TokenLexer<'input> {

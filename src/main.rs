@@ -5,17 +5,38 @@ lalrpop_mod!(pub grammar);
 mod ast;
 mod eval;
 mod util;
+mod parse;
 use ast::*;
+use tokio::io::{self, AsyncBufReadExt};
+use tokio::net::{TcpListener, TcpStream};
 
+#[tokio::main]
+async fn main() -> io::Result<()> {
+    let listener = TcpListener::bind("0.0.0.0:2369").await?;
 
-fn main() {
-    // let teststr = "(42)+5";
-    let teststr = "1 + 2 3 + 4";
+    loop {
+        let (socket, _) = listener.accept().await?;
 
-    let lexer = util::TokenLexer::new(teststr);
-    println!("{:?} -> {:?}",
-             teststr,
-             grammar::TopLevelParser::new().parse(teststr, lexer).unwrap());
+        tokio::spawn(async move {
+            respond(socket).await.expect("respond() succeeds");
+        });
+    }
+
+    // let lexer = util::TokenLexer::new(teststr);
+    // println!("{:?} -> {:?}",
+    //          teststr,
+    //          grammar::TopLevelParser::new().parse(teststr, lexer).unwrap());
+}
+
+async fn respond(sock: TcpStream) -> io::Result<()> {
+    let stream = io::BufStream::new(sock);
+
+    // loop {
+    //     let mut line = String::new();
+    //     stream.read_line(&mut line)?;
+    //     println!("Received {:?}", line);
+    // }
+    return Ok(())
 }
 
 #[cfg(test)]
