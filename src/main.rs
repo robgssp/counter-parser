@@ -8,53 +8,69 @@ mod eval;
 mod util;
 mod parse;
 
-use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::io::{self, AsyncRead, AsyncWrite, AsyncBufReadExt, AsyncWriteExt};
+use tokio::net::TcpListener;
 use std::str;
 use std::default::Default;
-use simple_error::SimpleError;
+use clap::Parser;
 
 pub type Result<A> = std::result::Result<A, Box<dyn std::error::Error>>;
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    let listener = TcpListener::bind("0.0.0.0:2369").await?;
-    println!("listening...");
-
-    loop {
-        let (socket, addr) = listener.accept().await?;
-
-        tokio::spawn(async move {
-            println!("Accepted connection from {:?}", addr);
-
-            respond(socket).await.expect("respond() succeeds");
-        });
-    }
-
-    // let lexer = util::TokenLexer::new(teststr);
-    // println!("{:?} -> {:?}",
-    //          teststr,
-    //          grammar::TopLevelParser::new().parse(teststr, lexer).unwrap());
+#[derive(Parser, Debug)]
+#[clap(author, version)]
+struct Args {
+    #[clap(long)]
+    stdin: bool,
 }
 
-async fn respond(sock: TcpStream) -> Result<()> {
-    let mut stream = io::BufStream::new(sock);
+#[tokio::main]
+async fn main() -> Result<()> {
+    let args = Args::parse();
+
+    if args.stdin {
+        respond(io::stdin(), io::stdout()).await?;
+    } else {
+        let listener = TcpListener::bind("0.0.0.0:2369").await?;
+        println!("listening...");
+
+        loop {
+            let (socket, addr) = listener.accept().await?;
+
+            tokio::spawn(async move {
+                println!("Accepted connection from {:?}", addr);
+
+                let (r, w) = io::split(socket);
+                respond(r, w).await.expect("respond() succeeds");
+            });
+        }
+    }
+
+    Ok(())
+}
+
+async fn respond<R, W>(reader: R, writer: W) -> Result<()>
+    where R: AsyncRead + Unpin,
+          W: AsyncWrite + Unpin,
+{
+    let mut rstream = io::BufReader::new(reader);
+    let mut wstream = io::BufWriter::new(writer);
     let mut linebuf = Vec::new();
 
     while {
         linebuf.clear();
-        let n = stream.read_until(b'\n', &mut linebuf).await?;
+        let n = rstream.read_until(b'\n', &mut linebuf).await?;
+        n > 0
+    } {
         let line = str::from_utf8(&linebuf)?;
         let msg = match eval_line(&line) {
             Ok(res) => res,
             Err(e) => format!("{}\n", e),
         };
-        stream.write_all(msg.as_bytes()).await?;
-        stream.flush().await?;
-        n > 0
-    } {}
+        wstream.write_all(msg.as_bytes()).await?;
+        wstream.flush().await?;
+    }
 
-    println!("Connection closed");
+    println!("Session closed");
     Ok(())
 }
 
