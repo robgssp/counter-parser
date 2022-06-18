@@ -1,23 +1,32 @@
 #[macro_use] extern crate lalrpop_util;
 #[macro_use] extern crate simple_error;
+#[macro_use] extern crate lazy_static;
 
 lalrpop_mod!(pub grammar);
 mod ast;
 mod eval;
 mod util;
 mod parse;
-use ast::*;
-use tokio::io::{self, AsyncBufReadExt};
+
+use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
+use std::str;
+use std::default::Default;
+use simple_error::SimpleError;
+
+pub type Result<A> = std::result::Result<A, Box<dyn std::error::Error>>;
 
 #[tokio::main]
-async fn main() -> io::Result<()> {
+async fn main() -> Result<()> {
     let listener = TcpListener::bind("0.0.0.0:2369").await?;
+    println!("listening...");
 
     loop {
-        let (socket, _) = listener.accept().await?;
+        let (socket, addr) = listener.accept().await?;
 
         tokio::spawn(async move {
+            println!("Accepted connection from {:?}", addr);
+
             respond(socket).await.expect("respond() succeeds");
         });
     }
@@ -28,19 +37,37 @@ async fn main() -> io::Result<()> {
     //          grammar::TopLevelParser::new().parse(teststr, lexer).unwrap());
 }
 
-async fn respond(sock: TcpStream) -> io::Result<()> {
-    let stream = io::BufStream::new(sock);
+async fn respond(sock: TcpStream) -> Result<()> {
+    let mut stream = io::BufStream::new(sock);
+    let mut linebuf = Vec::new();
 
-    // loop {
-    //     let mut line = String::new();
-    //     stream.read_line(&mut line)?;
-    //     println!("Received {:?}", line);
-    // }
-    return Ok(())
+    while {
+        linebuf.clear();
+        let n = stream.read_until(b'\n', &mut linebuf).await?;
+        let line = str::from_utf8(&linebuf)?;
+        let msg = match eval_line(&line) {
+            Ok(res) => res,
+            Err(e) => format!("{}\n", e),
+        };
+        stream.write_all(msg.as_bytes()).await?;
+        stream.flush().await?;
+        n > 0
+    } {}
+
+    println!("Connection closed");
+    Ok(())
+}
+
+fn eval_line(line: &str) -> Result<String> {
+    let expr = parse::best_parse(line).ok_or_else(
+        || simple_error!("No good parses in '{}'", line))?;
+
+    eval::eval(&expr, &Default::default()).map(|v| format!("{}\n", v.to_string()))
 }
 
 #[cfg(test)]
 mod tests {
+    use ast::*;
     use super::*;
     #[test]
     fn test_terms() {
@@ -103,6 +130,32 @@ mod tests {
             let lexer = util::TokenLexer::new(string);
             let parse = parser.parse(string, lexer);
             assert!(parse.is_err(), "Parsing {:?} incorrectly succeeded, with {:?}", string, parse.unwrap());
+        }
+    }
+
+    #[test]
+    fn test_precedence() {
+        let cases: &[(&'static str, Expr)] = &[
+            ("1 + 2 * 3",
+             Box::new(BinOp(Add,
+                            Box::new(Number(1, Digits)),
+                            Box::new(BinOp(Mul,
+                                           Box::new(Number(2, Digits)),
+                                           Box::new(Number(3, Digits))))))),
+            ("1 * 2 + 3",
+             Box::new(BinOp(Add,
+                            Box::new(BinOp(Mul,
+                                           Box::new(Number(1, Digits)),
+                                           Box::new(Number(2, Digits)))),
+                            Box::new(Number(3, Digits)))))
+        ];
+
+        let parser = grammar::TopLevelParser::new();
+
+        for (string, res) in cases.iter() {
+            let lexer = util::TokenLexer::new(string);
+            let parse = parser.parse(string, lexer);
+            assert_eq!(parse.unwrap(), *res, "Wrong parse");
         }
     }
 }

@@ -1,43 +1,54 @@
 // -*- rust -*-
 
-use std::str::FromStr;
-use crate::ast::{Expr, BinOpcode, NumSource};
+use crate::ast::{Expr, Node, BinOpcode, NumSource};
 use crate::util;
 
 use lalrpop_util::ParseError;
 
 grammar<'input>(input: &'input str);
 
-pub TopLevel: Box<Expr> = {
+pub TopLevel: Expr = {
     Term,
-    <Term> ! => Box::new(Expr::BadParse(<>)),
+    <Term> ! => Box::new(Node::BadParse(<>)),
 }
 
-pub Term: Box<Expr> = Term2;
+pub Term: Expr = Term1;
 
-Term2: Box<Expr> = {
-    Term1,
-    <a:Term2> "*" <b:Term1> => Box::new(Expr::BinOp(BinOpcode::Mul, a, b)),
+Term2Op: BinOpcode = {
+    "*" => BinOpcode::Mul,
+    "/" => BinOpcode::Div,
 }
 
-Term1: Box<Expr> = {
+Term2: Expr = {
     Val,
-    <a:Term1> "+" <b:Val> => Box::new(Expr::BinOp(BinOpcode::Add, a, b)),
-    <a:Term1> "-" <b:Val> => Box::new(Expr::BinOp(BinOpcode::Sub, a, b)),
-    "(" <t:Term> ")" => t,
+    <a:Term2> <op:Term2Op> <b:Val> => Box::new(Node::BinOp(op, a, b)),
+//     <a:Term2> Term2Op ! => Box::new(Node::BadParse(a)),
+}
+
+Term1Op: BinOpcode = {
+    "+" => BinOpcode::Add,
+    "-" => BinOpcode::Sub,
+}
+
+Term1: Expr = {
+    Term2,
+    <a:Term1> <op:Term1Op> <b:Term2> => Box::new(Node::BinOp(op, a, b)),
+//     <a:Term1> Term1Op ! => Box::new(Node::BadParse(a)),
 };
 
-Val: Box<Expr> = {
+Val: Expr = {
     NumExpr,
+    Roll => Box::new(Node::Roll(<>.0, <>.1)),
     NumWordsExpr,
-    Var => Box::new(Expr::Var(String::from(<>))),
+    Var => Box::new(Node::Var(String::from(<>))),
+    "(" <t:Term> ")" => t,
 }
 
-NumExpr: Box<Expr> =
-    <Digits> => Box::new(Expr::Number(<>, NumSource::Digits));
+NumExpr: Expr =
+    <Digits> => Box::new(Node::Number(<>, NumSource::Digits));
 
-NumWordsExpr: Box<Expr> =
-    <NumWords> => Box::new(Expr::Number(<>, NumSource::Words));
+NumWordsExpr: Expr =
+    <NumWords> => Box::new(Node::Number(<>, NumSource::Words));
 
 // -- NumWords
 
@@ -122,16 +133,13 @@ extern {
         "+" => util::Token::Plus,
         "-" => util::Token::Minus,
         "*" => util::Token::Times,
-
+        "/" => util::Token::Slash,
         "(" => util::Token::LParen,
         ")" => util::Token::RParen,
 
         Digits => util::Token::Digits(<i64>),
+        Roll => util::Token::Roll(<(i64, i64)>),
         Var => util::Token::Var(<&'input str>),
-
-    // #[error]
-    // #[regex(r"\s+", logos::skip)]
-    // Unknown,
 
         "zero" => util::Token::Zero,
         "one" => util::Token::One,
@@ -166,5 +174,7 @@ extern {
         "million" => util::Token::Million,
         "billion" => util::Token::Billion,
         "trillion" => util::Token::Trillion,
+
+        Unknown => util::Token::Unknown,
     }
 }

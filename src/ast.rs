@@ -1,16 +1,19 @@
 #[derive(Debug, PartialEq)]
-pub enum Expr {
+pub enum Node {
     Number(i64, NumSource),
+    Roll(i64, i64),
     Var(String),
-    BinOp(BinOpcode, Box<Expr>, Box<Expr>),
+    BinOp(BinOpcode, Expr, Expr),
     Funcall(String, Vec<Expr>),
-    BadParse(Box<Expr>),
+    BadParse(Expr),
 }
-pub use Expr::*;
+pub use Node::*;
+
+pub type Expr = Box<Node>;
 
 #[derive(Debug, PartialEq)]
 pub enum BinOpcode {
-    Add, Sub, Mul
+    Add, Sub, Mul, Div
 }
 pub use BinOpcode::*;
 

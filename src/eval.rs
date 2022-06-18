@@ -1,20 +1,32 @@
 use crate::ast::*;
-use std::error::Error;
-use simple_error::SimpleError;
 use std::collections::HashMap;
+use crate::Result;
+use rand;
 
 type Env = HashMap<String, i64>;
 
-fn eval(expr: &Expr, env: &Env) -> Result<i64, Box<dyn Error>> {
+pub fn eval(expr: &Node, env: &Env) -> Result<i64> {
     match expr {
         Number(i, _) => Ok(*i),
+        Roll(n, sides) => Ok(roll(*n, *sides)),
         Var(name) => Ok(env.get(name).map(|v| *v).ok_or_else(
             || Box::new(simple_error!("Unbound variable {:?}", name)))?),
         BinOp(Add, a, b) => Ok(eval(&a, env)? + eval(&b, env)?),
         BinOp(Sub, a, b) => Ok(eval(&a, env)? - eval(&b, env)?),
         BinOp(Mul, a, b) => Ok(eval(&a, env)? * eval(&b, env)?),
-        _ => Err(simple_error!("Unknown expr {:?}", expr))?,
+        BinOp(Div, a, b) => Ok(eval(&a, env)? / eval(&b, env)?),
+        Funcall(f, _args) => Err(simple_error!("Unknown function '{}'", f))?,
+        BadParse(e) => Err(simple_error!(
+            "Bad parse encountered in execution! near {:?}", e))?,
     }
+}
+
+fn roll(n: i64, sides: i64) -> i64 {
+    let mut res = 0;
+    for _ in 0..n {
+        res += (rand::random::<u64>() % (sides as u64) + 1) as i64;
+    }
+    return res;
 }
 
 #[cfg(test)]
@@ -40,5 +52,10 @@ mod tests {
                             Box::new(Var("j".to_string())),
                             Box::new(Number(2, Words))),
                      &env) .is_err());
+    }
+
+    #[test]
+    fn test_roll() {
+        println!("1d2 -> {}", roll(5, 2));
     }
 }
