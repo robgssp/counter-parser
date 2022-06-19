@@ -1,5 +1,5 @@
 use crate::ast::*;
-use crate::query::Result;
+use crate::types::Result;
 use std::collections::HashMap;
 use rand;
 

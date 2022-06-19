@@ -6,6 +6,6 @@ pub mod parse;
 pub mod eval;
 pub mod ast;
 pub mod util;
-pub mod query;
+pub mod types;
 
 lalrpop_mod!(pub grammar);

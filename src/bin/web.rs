@@ -1,65 +1,60 @@
 #[macro_use] extern crate simple_error;
+extern crate derive_more;
 
-use actix_web;
-use actix_web::{post, HttpServer, App, Responder, HttpResponse};
+use actix_web::http::header::ContentType;
+use actix_web::{self, web, post, HttpServer, App, Responder, HttpResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value};
 use counter_parser::parse;
 use counter_parser::eval;
+use counter_parser::types::{Request, Response};
+use std::result;
+use derive_more::Display;
 
-fn eval_line(line: &str) -> Result<String> {
-    let expr = parse::best_parse(line).ok_or_else(
-        || simple_error!("No good parses in '{}'", line))?;
+type Result<A, E = Box<dyn std::error::Error>> = result::Result<A, E>;
 
-    eval::eval(&expr, &Default::default()).map(|v| format!("{}\n", v.to_string()))
+#[derive(Debug, Display)]
+enum UserError {
+    #[display(fmt = "no parses found")]
+    NoParse,
+    #[display(fmt = "evaluation failed")]
+    BadEval,
+    #[display(fmt = "internal server error")]
+    Internal
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct Request {
-    message: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "type", rename_all = "camelCase")]
-enum Response {
-    Good { val: Option<String> },
-    Bad { message: String },
-}
-
-
-type Result<A> = std::result::Result<A, Box<dyn std::error::Error>>;
+// impl actix_web::error::ResponseError for UserError {
+//     fn error_response(&self) -> HttpResposne {
+//         HttpResponse::build(self.status_code())
+//             .
 
 #[actix_web::main]
 async fn main() -> std::result::Result<(), std::io::Error> {
     HttpServer::new(|| {
         App::new()
-            .service(evalE)
+            .service(eval_svc)
     })
         .bind(("127.0.0.1", 2369))?
         .run()
         .await
 }
 
-fn evalE_body(body: String) -> Result<HttpResponse> {
-    let req = serde_json::from_str::<Request>(&body)?;
-
-    let resp = match eval_line(&req.message) {
-        Ok(str) =>
-            HttpResponse::Ok().body(
-                serde_json::to_string(
-                    &Response::Good { val: Some(str) })?),
-        Err(e) =>
-            HttpResponse::BadRequest().body(
-                serde_json::to_string(
-                    &Response::Bad { message: format!("{}", e) })?),
-    };
-    Ok(resp)
-}
-
 
 #[post("/eval")]
-async fn evalE(body: String) -> HttpResponse {
-    evalE_body(body).unwrap_or_else(|e| HttpResponse::InternalServerError().body(format!("{}", e)))
+async fn eval_svc(body: String) -> Result<HttpResponse> {
+    let req: Request = serde_json::from_str(&body)?;
+
+    let expr = parse::best_parse(&req.message).ok_or_else(
+        || simple_error!("No parses found"))?;
+
+    let val = eval::eval(&expr, &Default::default())?;
+
+    Ok(
+        HttpResponse::Ok().body(
+            serde_json::to_string(
+                &Response::Good { val: Some(format!("{}", val)) })?)
+            //.set(ContentType::JSON)
+    )
 }
 
 
