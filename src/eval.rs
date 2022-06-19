@@ -1,6 +1,6 @@
 use crate::ast::*;
+use crate::query::Result;
 use std::collections::HashMap;
-use crate::Result;
 use rand;
 
 type Env = HashMap<String, i64>;
