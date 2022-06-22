@@ -1,6 +1,6 @@
 // -*- rust -*-
 
-use crate::ast::{Expr, Node, BinOpcode, NumSource};
+use crate::ast::{Expr, Node, BinOpcode, NumSource, Num, to_num};
 use crate::util;
 
 use lalrpop_util::ParseError;
@@ -52,66 +52,66 @@ NumWordsExpr: Expr =
 
 // -- NumWords
 
-Digit: i64 = {
-    "zero" => 0,
-    "one" => 1,
-    "two" => 2,
-    "three" => 3,
-    "four" => 4,
-    "five" => 5,
-    "six" => 6,
-    "seven" => 7,
-    "eight" => 8,
-    "nine" => 9
+Digit: Num = {
+    "zero" => to_num(0),
+    "one" => to_num(1),
+    "two" => to_num(2),
+    "three" => to_num(3),
+    "four" => to_num(4),
+    "five" => to_num(5),
+    "six" => to_num(6),
+    "seven" => to_num(7),
+    "eight" => to_num(8),
+    "nine" => to_num(9)
 }
 
-Tens: i64 = {
-    "twenty" => 20,
-    "thirty" => 30,
-    "forty" => 40,
-    "fifty" => 50,
-    "sixty" => 60,
-    "seventy" => 70,
-    "eighty" => 80,
-    "ninety" => 90,
+Tens: Num = {
+    "twenty" => to_num(20),
+    "thirty" => to_num(30),
+    "forty" => to_num(40),
+    "fifty" => to_num(50),
+    "sixty" => to_num(60),
+    "seventy" => to_num(70),
+    "eighty" => to_num(80),
+    "ninety" => to_num(90),
 }
 
-Teens: i64 = {
-    "ten" => 10,
-    "eleven" => 11,
-    "twelve" => 12,
-    "thirteen" => 13,
-    "fourteen" => 14,
-    "fifteen" => 15,
-    "sixteen" => 16,
-    "seventeen" => 17,
-    "eighteen" => 18,
-    "nineteen" => 19,
+Teens: Num = {
+    "ten" => to_num(10),
+    "eleven" => to_num(11),
+    "twelve" => to_num(12),
+    "thirteen" => to_num(13),
+    "fourteen" => to_num(14),
+    "fifteen" => to_num(15),
+    "sixteen" => to_num(16),
+    "seventeen" => to_num(17),
+    "eighteen" => to_num(18),
+    "nineteen" => to_num(19),
 }
 
-BigMagnitude: i64 = {
-    "thousand" => 1_000,
-    "million" => 1_000_000,
-    "billion" => 1_000_000_000,
-    "trillion" => 1_000_000_000_000,
+BigMagnitude: Num = {
+    "thousand" => to_num(1_000),
+    "million" => to_num(1_000_000),
+    "billion" => to_num(1_000_000_000),
+    "trillion" => to_num(1_000_000_000_000),
 }
 
-FullTens: i64 = {
-    <tens:Tens?> <ones:Digit> => tens.unwrap_or(0) + ones,
+FullTens: Num = {
+    <tens:Tens?> <ones:Digit> => tens.unwrap_or(to_num(0)) + ones,
     <tens:Tens> => tens,
     <Teens> => <>,
 }
 
-pub ThousandsGroup: i64 = {
+pub ThousandsGroup: Num = {
     <hundreds: (<Digit> "hundred")?> <tens:FullTens> =>
-        hundreds.map_or(0, |v| v*100) + tens,
+        hundreds.map_or(to_num(0), |v| v*to_num(100)) + tens,
 }
 
 // Returns the number, and the largest encountered magnitude
-NumWordsGroups: (i64, i64) = {
+NumWordsGroups: (Num, Num) = {
     <ts:ThousandsGroup> <mag:BigMagnitude?> => {
-        let mag1 = mag.unwrap_or(1);
-        (ts * mag1, mag1)
+        let mag1 = mag.unwrap_or(to_num(1));
+        (ts * &mag1, mag1)
     },
     <ts:ThousandsGroup> <mag:BigMagnitude> <rest:NumWordsGroups> =>? {
         let (vrest, magrest) = rest;
@@ -119,11 +119,11 @@ NumWordsGroups: (i64, i64) = {
             return Err(ParseError::User
                        { error: "Magnitudes must descend".to_string() });
         }
-        Ok((ts * mag + vrest, mag))
+        Ok((ts * &mag + vrest, mag))
     }
 };
 
-pub NumWords: i64 = <NumWordsGroups> => <>.0;
+pub NumWords: Num = <NumWordsGroups> => <>.0;
 
 extern {
     type Location = usize;
@@ -137,7 +137,7 @@ extern {
         "(" => util::Token::LParen,
         ")" => util::Token::RParen,
 
-        Digits => util::Token::Digits(<i64>),
+        Digits => util::Token::Digits(<Num>),
         Roll => util::Token::Roll(<(i64, i64)>),
         Var => util::Token::Var(<&'input str>),
 

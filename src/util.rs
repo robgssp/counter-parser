@@ -2,9 +2,10 @@ extern crate logos;
 use logos::Logos;
 use core::ops::Range;
 use regex::Regex;
+use crate::ast::Num;
 // use std::str::FromStr;
 
-#[derive(Logos, Debug, PartialEq, Copy, Clone)]
+#[derive(Logos, Debug, PartialEq, Clone)]
 pub enum Token<'input> {
     #[token("+")]
     Plus,
@@ -20,8 +21,8 @@ pub enum Token<'input> {
     RParen,
     #[regex(r"\d*d\d+", |lex| parse_roll(lex.slice()))]
     Roll((i64, i64)),
-    #[regex(r"[0-9]+", |lex| lex.slice().parse())]
-    Digits(i64),
+    #[regex(r"[0-9]+", |lex| Num::from_integer(lex.slice().parse().unwrap()))]
+    Digits(Num),
     #[regex(r"[a-zA-Z][a-zA-Z0-9_]*", |lex| lex.slice())]
     Var(&'input str),
 

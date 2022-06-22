@@ -45,7 +45,7 @@ fn respond_lines<R, W>(reader: R, mut writer: W) -> Result<()>
     let mut breader = io::BufReader::new(reader);
     let mut linebuf = Vec::new();
 
-    println!("Reading lines...");
+    println!("Welcome to mathematica");
 
     while {
         linebuf.clear();
@@ -57,7 +57,6 @@ fn respond_lines<R, W>(reader: R, mut writer: W) -> Result<()>
             Ok(res) => res,
             Err(e) => format!("{}\n", e),
         };
-        println!("Responding with {:?}", msg);
         writer.write_all(msg.as_bytes())?;
         writer.flush()?;
     }
