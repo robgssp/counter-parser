@@ -30,6 +30,7 @@ enum UserError {
 
 #[actix_web::main]
 async fn main() -> std::result::Result<(), std::io::Error> {
+    println!("Starting counter-parser server...");
     HttpServer::new(|| {
         App::new()
             .service(eval_svc)
