@@ -27,6 +27,7 @@ fn expr_size(e: &Node) -> i32 {
         Number(_, _) => 1,
         Roll(_, _) => 2,
         Var(_) => 1,
+        UnaOp(_, e) => 1 + expr_size(&e),
         BinOp(_, l, r) => 1 + expr_size(&l) + expr_size(&r),
         Funcall(_, exprs) => 1 + exprs.iter().map(|e| { expr_size(&e) }).sum::<i32>(),
         BadParse(e) => expr_size(&e),

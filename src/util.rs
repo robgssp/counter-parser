@@ -15,6 +15,10 @@ pub enum Token<'input> {
     Times,
     #[token("/")]
     Slash,
+    #[token("^")]
+    Hat,
+    #[token("!")]
+    Excl,
     #[token("(")]
     LParen,
     #[token(")")]

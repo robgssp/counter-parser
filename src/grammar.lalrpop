@@ -1,6 +1,6 @@
 // -*- rust -*-
 
-use crate::ast::{Expr, Node, BinOpcode, NumSource, Num, to_num};
+use crate::ast::{Expr, Node, BinOpcode, UnaOpcode, NumSource, Num, to_num};
 use crate::util;
 
 use lalrpop_util::ParseError;
@@ -19,9 +19,14 @@ Term2Op: BinOpcode = {
     "/" => BinOpcode::Div,
 }
 
-Term2: Expr = {
+Term3: Expr = {
     Val,
-    <a:Term2> <op:Term2Op> <b:Val> => Box::new(Node::BinOp(op, a, b)),
+    <a:Val> "!" => Box::new(Node::UnaOp(UnaOpcode::Factorial, a)),
+}
+
+Term2: Expr = {
+    Term3,
+    <a:Term2> <op:Term2Op> <b:Term3> => Box::new(Node::BinOp(op, a, b)),
 //     <a:Term2> Term2Op ! => Box::new(Node::BadParse(a)),
 }
 
@@ -134,6 +139,8 @@ extern {
         "-" => util::Token::Minus,
         "*" => util::Token::Times,
         "/" => util::Token::Slash,
+        "^" => util::Token::Hat,
+        "!" => util::Token::Excl,
         "(" => util::Token::LParen,
         ")" => util::Token::RParen,
 

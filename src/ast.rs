@@ -8,6 +8,7 @@ pub enum Node {
     Roll(i64, i64),
     Var(String),
     BinOp(BinOpcode, Expr, Expr),
+    UnaOp(UnaOpcode, Expr),
     Funcall(String, Vec<Expr>),
     BadParse(Expr),
 }
@@ -16,8 +17,14 @@ pub use Node::*;
 pub type Expr = Box<Node>;
 
 #[derive(Debug, PartialEq)]
+pub enum UnaOpcode {
+    Factorial,
+}
+pub use UnaOpcode::*;
+
+#[derive(Debug, PartialEq)]
 pub enum BinOpcode {
-    Add, Sub, Mul, Div
+    Add, Sub, Mul, Div, Exp
 }
 pub use BinOpcode::*;
 
