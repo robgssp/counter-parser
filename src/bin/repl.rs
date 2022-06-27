@@ -99,15 +99,17 @@ fn eval_line(line: &str) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use ast::*;
+    use counter_parser::ast::*;
+    use counter_parser::grammar;
+    use counter_parser::util;
     use super::*;
     #[test]
     fn test_terms() {
-        let cases = &[("(42)", Box::new(Number(42, Digits))),
+        let cases = &[("(42)", Box::new(Number(to_num(42), Digits))),
                       ("one hundred fifty + 3",
                        Box::new(BinOp(Add,
-                                      Box::new(Number(150, Words)),
-                                      Box::new(Number(3, Digits)))))
+                                      Box::new(Number(to_num(150), Words)),
+                                      Box::new(Number(to_num(3), Digits)))))
         ];
 
         let parser = grammar::TermParser::new();
@@ -130,6 +132,7 @@ mod tests {
               ("zero hundred fifteen", 15),
               ("two", 2),
               ("one thousand", 1000),
+              ("one hundred", 100),
               ("twenty", 20),
               ("twenty thousand", 20000),
               ("twenty thousand five hundred fifteen", 20515),
@@ -143,7 +146,7 @@ mod tests {
             let lexer = util::TokenLexer::new(string);
             let parse = parser.parse(string, lexer);
             assert!(parse.is_ok(), "Failed to parse {:?}: {:?}", string, parse.err());
-            assert_eq!(parse.unwrap(), *num, "String parsed to the wrong number: {:?}", string);
+            assert_eq!(parse.unwrap(), to_num(*num), "String parsed to the wrong number: {:?}", string);
         }
     }
 
@@ -173,16 +176,16 @@ mod tests {
         let cases: &[(&'static str, Expr)] = &[
             ("1 + 2 * 3",
              Box::new(BinOp(Add,
-                            Box::new(Number(1, Digits)),
+                            Box::new(Number(to_num(1), Digits)),
                             Box::new(BinOp(Mul,
-                                           Box::new(Number(2, Digits)),
-                                           Box::new(Number(3, Digits))))))),
+                                           Box::new(Number(to_num(2), Digits)),
+                                           Box::new(Number(to_num(3), Digits))))))),
             ("1 * 2 + 3",
              Box::new(BinOp(Add,
                             Box::new(BinOp(Mul,
-                                           Box::new(Number(1, Digits)),
-                                           Box::new(Number(2, Digits)))),
-                            Box::new(Number(3, Digits)))))
+                                           Box::new(Number(to_num(1), Digits)),
+                                           Box::new(Number(to_num(2), Digits)))),
+                            Box::new(Number(to_num(3), Digits)))))
         ];
 
         let parser = grammar::TopLevelParser::new();
