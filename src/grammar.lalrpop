@@ -8,25 +8,36 @@ use lalrpop_util::ParseError;
 grammar<'input>(input: &'input str);
 
 pub TopLevel: Expr = {
-    Term,
+    AnyFix,
     <Term> ! => Box::new(Node::BadParse(<>)),
 }
 
-pub Term: Expr = Term1;
-
-Term2Op: BinOpcode = {
-    "*" => BinOpcode::Mul,
-    "/" => BinOpcode::Div,
+AnyFix: Expr = {
+    Term,
+    PostOpTop,
+    PreOpTop,
 }
+
+// Infix ops
+pub Term: Expr = Term1;
 
 Term4: Expr = {
     Val,
     <a:Val> "!" => Box::new(Node::UnaOp(UnaOpcode::Factorial, a)),
 }
 
+Term3Op: BinOpcode = {
+    "^" => BinOpcode::Exp,
+}
+
 Term3: Expr = {
     Term4,
-    <a:Term4> "^" <b:Term3> => Box::new(Node::BinOp(BinOpcode::Exp, a, b)),
+    <a:Term4> <op:Term3Op> <b:Term3> => Box::new(Node::BinOp(op, a, b)),
+}
+
+Term2Op: BinOpcode = {
+    "*" => BinOpcode::Mul,
+    "/" => BinOpcode::Div,
 }
 
 Term2: Expr = {
@@ -51,9 +62,41 @@ Val: Expr = {
     Roll => Box::new(Node::Roll(<>.0, <>.1)),
     NumWordsExpr,
     Var => Box::new(Node::Var(String::from(<>))),
-    "(" <t:Term> ")" => t,
+    "(" <t:AnyFix> ")" => t,
 }
 
+// Postfix ops
+
+BinOp: BinOpcode = {
+    Term1Op, Term2Op, Term3Op
+}
+
+PostOp: Expr = {
+    PostVal, PostOpTop
+}
+
+PostOpTop: Expr = {
+    <a:PostOp> <b:PostOp> <op:BinOp> => Box::new(Node::BinOp(op, a, b)),
+}
+
+PostVal: Expr = {
+    NumExpr,
+    Roll => Box::new(Node::Roll(<>.0, <>.1)),
+    Var => Box::new(Node::Var(String::from(<>))),
+    "(" <t:AnyFix> ")" => t,
+}
+
+// Prefix ops
+
+PreOp: Expr = {
+    PostVal, PreOpTop
+}
+
+PreOpTop: Expr = {
+    <op:BinOp> <a:PreOp> <b:PreOp> => Box::new(Node::BinOp(op, a, b))
+}
+
+// Common
 NumExpr: Expr =
     <Digits> => Box::new(Node::Number(<>, NumSource::Digits));
 
