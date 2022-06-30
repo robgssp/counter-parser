@@ -23,6 +23,14 @@ pub enum Token<'input> {
     LParen,
     #[token(")")]
     RParen,
+    #[token("&")]
+    #[token("and")]
+    And,
+    #[token("|")]
+    #[token("or")]
+    Or,
+    #[token("xor")]
+    Xor,
     #[regex(r"\d*d\d+", |lex| parse_roll(lex.slice()))]
     Roll((i64, i64)),
     #[regex(r"[0-9]+", |lex| Num::from_integer(lex.slice().parse().unwrap()))]
@@ -95,9 +103,13 @@ impl<'input> Iterator for TokenLexer<'input> {
     type Item = Result<(usize, Token<'input>, usize), String>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let tok = self.lexer.next()?;
-        let Range { start: s, end: e } = self.lexer.span();
-        Some(Ok((s, tok, e)))
+        match self.lexer.next() {
+            Some(tok) => {
+                let Range { start: s, end: e } = self.lexer.span();
+                Some(Ok((s, tok, e)))
+            }
+            None => None,
+        }
     }
 }
 

@@ -95,4 +95,18 @@ mod tests {
 
         println!("Best parse for {:?} is {:?}", string, best_parse(string));
     }
+
+    #[test]
+    fn test_unknown() {
+        let string = "1 2 + `";
+
+        let parser = grammar::TopLevelParser::new();
+        let mut lexer = util::TokenLexer::new(string);
+        let parse = parser.parse(string, &mut lexer);
+
+        assert_eq!(parse, Ok(Box::new(BadParse(
+            Box::new(BinOp(Add,
+                           Box::new(Number(to_num(1), Digits)),
+                           Box::new(Number(to_num(2), Digits))))))));
+    }
 }

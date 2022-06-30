@@ -174,6 +174,13 @@ mod tests {
     #[test]
     fn test_precedence() {
         let cases: &[(&'static str, Expr)] = &[
+            ("1 - 2 - 3",
+             Box::new(BinOp(Sub,
+                            Box::new(BinOp(Sub,
+                                           Box::new(Number(to_num(1), Digits)),
+                                           Box::new(Number(to_num(2), Digits)))),
+                            Box::new(Number(to_num(3), Digits)),
+             ))),
             ("1 + 2 * 3",
              Box::new(BinOp(Add,
                             Box::new(Number(to_num(1), Digits)),
@@ -185,7 +192,19 @@ mod tests {
                             Box::new(BinOp(Mul,
                                            Box::new(Number(to_num(1), Digits)),
                                            Box::new(Number(to_num(2), Digits)))),
-                            Box::new(Number(to_num(3), Digits)))))
+                            Box::new(Number(to_num(3), Digits))))),
+            ("1 * 2 ^ 3",
+             Box::new(BinOp(Mul,
+                            Box::new(Number(to_num(1), Digits)),
+                            Box::new(BinOp(Exp,
+                                           Box::new(Number(to_num(2), Digits)),
+                                           Box::new(Number(to_num(3), Digits))))))),
+            ("1 ^ 2 ^ 3",
+             Box::new(BinOp(Exp,
+                            Box::new(Number(to_num(1), Digits)),
+                            Box::new(BinOp(Exp,
+                                           Box::new(Number(to_num(2), Digits)),
+                                           Box::new(Number(to_num(3), Digits))))))),
         ];
 
         let parser = grammar::TopLevelParser::new();

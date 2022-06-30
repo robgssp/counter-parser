@@ -21,41 +21,46 @@ AnyFix: Expr = {
 // Infix ops
 pub Term: Expr = Term1;
 
+BinOpLeft<Ops, Higher>: Expr = {
+    Higher,
+    <a:BinOpLeft<Ops, Higher>> <op:Ops> <b:Higher> =>
+        Box::new(Node::BinOp(op, a, b)),
+}
+
+BinOpRight<Ops, Higher>: Expr = {
+    Higher,
+    <a:Higher> <op:Ops> <b:BinOpRight<Ops, Higher>> =>
+        Box::new(Node::BinOp(op, a, b)),
+}
+
+Term7Op: BinOpcode = "|" => BinOpcode::Or;
+Term7: Expr = BinOpLeft<Term7Op, Val>;
+
+Term6Op: BinOpcode = "xor" => BinOpcode::Xor;
+Term6: Expr = BinOpLeft<Term6Op, Term7>;
+
+Term5Op: BinOpcode = "&" => BinOpcode::And;
+Term5: Expr = BinOpLeft<Term5Op, Term6>;
+
 Term4: Expr = {
-    Val,
-    <a:Val> "!" => Box::new(Node::UnaOp(UnaOpcode::Factorial, a)),
+    Term5,
+    <a:Term5> "!" => Box::new(Node::UnaOp(UnaOpcode::Factorial, a)),
 }
 
-Term3Op: BinOpcode = {
-    "^" => BinOpcode::Exp,
-}
-
-Term3: Expr = {
-    Term4,
-    <a:Term4> <op:Term3Op> <b:Term3> => Box::new(Node::BinOp(op, a, b)),
-}
+Term3Op: BinOpcode = "^" => BinOpcode::Exp;
+Term3: Expr = BinOpRight<Term3Op, Term4>;
 
 Term2Op: BinOpcode = {
     "*" => BinOpcode::Mul,
     "/" => BinOpcode::Div,
 }
-
-Term2: Expr = {
-    Term3,
-    <a:Term2> <op:Term2Op> <b:Term3> => Box::new(Node::BinOp(op, a, b)),
-//     <a:Term2> Term2Op ! => Box::new(Node::BadParse(a)),
-}
+Term2: Expr = BinOpLeft<Term2Op, Term3>;
 
 Term1Op: BinOpcode = {
     "+" => BinOpcode::Add,
     "-" => BinOpcode::Sub,
 }
-
-Term1: Expr = {
-    Term2,
-    <a:Term1> <op:Term1Op> <b:Term2> => Box::new(Node::BinOp(op, a, b)),
-//     <a:Term1> Term1Op ! => Box::new(Node::BadParse(a)),
-};
+Term1: Expr = BinOpLeft<Term1Op, Term2>;
 
 Val: Expr = {
     NumExpr,
@@ -68,7 +73,7 @@ Val: Expr = {
 // Postfix ops
 
 BinOp: BinOpcode = {
-    Term1Op, Term2Op, Term3Op
+    Term1Op, Term2Op, Term3Op, Term5Op, Term6Op, Term7Op
 }
 
 PostOp: Expr = {
@@ -193,6 +198,9 @@ extern {
         "!" => util::Token::Excl,
         "(" => util::Token::LParen,
         ")" => util::Token::RParen,
+        "&" => util::Token::And,
+        "|" => util::Token::Or,
+        "xor" => util::Token::Xor,
 
         Digits => util::Token::Digits(<Num>),
         Roll => util::Token::Roll(<(i64, i64)>),

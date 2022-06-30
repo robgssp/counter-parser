@@ -24,7 +24,7 @@ pub use UnaOpcode::*;
 
 #[derive(Debug, PartialEq)]
 pub enum BinOpcode {
-    Add, Sub, Mul, Div, Exp
+    Add, Sub, Mul, Div, Exp, And, Or, Xor,
 }
 pub use BinOpcode::*;
 

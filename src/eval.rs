@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use rand;
 use num::traits::Zero;
 use num::pow::Pow;
-use num::{BigRational};
+use num::{BigRational, BigInt};
 
 type Env = HashMap<String, ast::Num>;
 
@@ -15,11 +15,22 @@ pub fn eval(expr: &Node, env: &Env) -> Result<ast::Num> {
         Var(name) => Ok(env.get(name).map(|v| v.clone()).ok_or_else(
             || Box::new(simple_error!("Unbound variable {:?}", name)))?),
         UnaOp(Factorial, a) => Ok(factorial(eval(&a, env)?)?),
-        BinOp(Add, a, b) => Ok(eval(&a, env)? + eval(&b, env)?),
-        BinOp(Sub, a, b) => Ok(eval(&a, env)? - eval(&b, env)?),
-        BinOp(Mul, a, b) => Ok(eval(&a, env)? * eval(&b, env)?),
-        BinOp(Div, a, b) => Ok(eval(&a, env)? / eval(&b, env)?),
-        BinOp(Exp, a, b) => Ok(exp(eval(&a, env)?, eval(&b, env)?)?),
+        BinOp(op, l, r) => {
+            let a = eval(&l, env)?;
+            let b = eval(&r, env)?;
+
+            let res = match op {
+                Add => a + b,
+                Sub => a - b,
+                Mul => a * b,
+                Div => a / b,
+                Exp => exp(a, b)?,
+                And => bitand(a, b)?,
+                Or  => bitor(a, b)?,
+                Xor => bitxor(a, b)?,
+            };
+            Ok(res)
+        }
         Funcall(f, _args) => Err(simple_error!("Unknown function '{}'", f))?,
         BadParse(e) => Err(simple_error!(
             "Bad parse encountered in execution! near {:?}", e))?,
@@ -36,8 +47,7 @@ fn roll(n: i64, sides: i64) -> ast::Num {
 }
 
 fn factorial(n: ast::Num) -> Result<ast::Num> {
-    if n.is_integer() {
-        let top = n.to_integer();
+    if let Some(top) = to_int(&n) {
         let mut res = 1.into();
         let mut iter: num::BigInt = 2.into();
         while iter <= top {
@@ -52,11 +62,38 @@ fn factorial(n: ast::Num) -> Result<ast::Num> {
 }
 
 fn exp(n: ast::Num, e: ast::Num) -> Result<ast::Num> {
-    if e.is_integer() {
-        let ie = e.to_integer();
-        return Ok(n.pow(ie));
+    match to_int(&e) {
+        Some(ie) => return Ok(n.pow(ie)),
+        None => Err(simple_error!("Exponent to non-integer {:?}", e))?,
+    }
+}
+
+fn bitand(a: ast::Num, b: ast::Num) -> Result<ast::Num> {
+    match (to_int(&a), to_int(&b)) {
+        (Some(ia), Some(ib)) => Ok((ia & ib).into()),
+        _ => Err(simple_error!("Bitand of non-integers"))?,
+    }
+}
+
+fn bitor(a: ast::Num, b: ast::Num) -> Result<ast::Num> {
+    match (to_int(&a), to_int(&b)) {
+        (Some(ia), Some(ib)) => Ok((ia | ib).into()),
+        _ => Err(simple_error!("Bitor of non-integers"))?,
+    }
+}
+
+fn bitxor(a: ast::Num, b: ast::Num) -> Result<ast::Num> {
+    match (to_int(&a), to_int(&b)) {
+        (Some(ia), Some(ib)) => Ok((ia ^ ib).into()),
+        _ => Err(simple_error!("Bitxor of non-integers"))?,
+    }
+}
+
+fn to_int(n: &ast::Num) -> Option<BigInt> {
+    if n.is_integer() {
+        Some(n.to_integer())
     } else {
-        return Err(simple_error!("Exponent to non-integer {:?}", e))?;
+        None
     }
 }
 
