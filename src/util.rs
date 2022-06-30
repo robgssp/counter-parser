@@ -3,7 +3,7 @@ use logos::Logos;
 use core::ops::Range;
 use regex::Regex;
 use crate::ast::Num;
-// use std::str::FromStr;
+use num::BigInt;
 
 #[derive(Logos, Debug, PartialEq, Clone)]
 pub enum Token<'input> {
@@ -42,6 +42,9 @@ pub enum Token<'input> {
     #[regex(r"\d*(d|D)\d+", |lex| parse_roll(lex.slice()))]
     Roll((i64, i64)),
     #[regex(r"-?[0-9]+", |lex| Num::from_integer(lex.slice().parse().unwrap()))]
+    #[regex(r"-?0x[0-9a-fA-F]+", |lex| parse_radix(lex.slice(), 16))]
+    #[regex(r"-?0o[0-7]+", |lex| parse_radix(lex.slice(), 8))]
+    #[regex(r"-?0b[01]+", |lex| parse_radix(lex.slice(), 2))]
     Digits(Num),
     #[regex(r"[a-zA-Z][a-zA-Z0-9_]*", |lex| lex.slice())]
     Var(&'input str),
@@ -93,6 +96,10 @@ fn parse_roll(roll: &str) -> (i64, i64) {
     let captures = REGEX.captures(roll).unwrap();
 
     return (captures[1].parse().unwrap_or(1), captures[3].parse().unwrap());
+}
+
+fn parse_radix(istring: &str, radix: u32) -> Num {
+    BigInt::parse_bytes(&istring.as_bytes()[2..], radix).unwrap().into()
 }
 
 // lalrpop takes an Iterator with item = Result<(Loc, Tok, Loc), LexError>
