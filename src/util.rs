@@ -33,7 +33,7 @@ pub enum Token<'input> {
     Xor,
     #[regex(r"\d*d\d+", |lex| parse_roll(lex.slice()))]
     Roll((i64, i64)),
-    #[regex(r"[0-9]+", |lex| Num::from_integer(lex.slice().parse().unwrap()))]
+    #[regex(r"-?[0-9]+", |lex| Num::from_integer(lex.slice().parse().unwrap()))]
     Digits(Num),
     #[regex(r"[a-zA-Z][a-zA-Z0-9_]*", |lex| lex.slice())]
     Var(&'input str),
