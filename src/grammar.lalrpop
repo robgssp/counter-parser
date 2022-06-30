@@ -33,13 +33,19 @@ BinOpRight<Ops, Higher>: Expr = {
         Box::new(Node::BinOp(op, a, b)),
 }
 
-Term7Op: BinOpcode = "|" => BinOpcode::Or;
-Term7: Expr = BinOpLeft<Term7Op, Val>;
+Term8Op: BinOpcode = "|" => BinOpcode::Or;
+Term8: Expr = BinOpLeft<Term8Op, Val>;
 
-Term6Op: BinOpcode = "xor" => BinOpcode::Xor;
+Term7Op: BinOpcode = "xor" => BinOpcode::Xor;
+Term7: Expr = BinOpLeft<Term7Op, Term8>;
+
+Term6Op: BinOpcode = "&" => BinOpcode::And;
 Term6: Expr = BinOpLeft<Term6Op, Term7>;
 
-Term5Op: BinOpcode = "&" => BinOpcode::And;
+Term5Op: BinOpcode = {
+    ">>" => BinOpcode::RShift,
+    "<<" => BinOpcode::LShift,
+}
 Term5: Expr = BinOpLeft<Term5Op, Term6>;
 
 Term4: Expr = {
@@ -73,7 +79,7 @@ Val: Expr = {
 // Postfix ops
 
 BinOp: BinOpcode = {
-    Term1Op, Term2Op, Term3Op, Term5Op, Term6Op, Term7Op
+    Term1Op, Term2Op, Term3Op, Term5Op, Term6Op, Term7Op, Term8Op
 }
 
 PostOp: Expr = {
@@ -201,6 +207,8 @@ extern {
         "&" => util::Token::And,
         "|" => util::Token::Or,
         "xor" => util::Token::Xor,
+        "<<" => util::Token::LShift,
+        ">>" => util::Token::RShift,
 
         Digits => util::Token::Digits(<Num>),
         Roll => util::Token::Roll(<(i64, i64)>),

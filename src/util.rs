@@ -31,6 +31,11 @@ pub enum Token<'input> {
     Or,
     #[token("xor")]
     Xor,
+    #[token("shift")]
+    #[token("<<")]
+    LShift,
+    #[token(">>")]
+    RShift,
     #[regex(r"\d*d\d+", |lex| parse_roll(lex.slice()))]
     Roll((i64, i64)),
     #[regex(r"-?[0-9]+", |lex| Num::from_integer(lex.slice().parse().unwrap()))]

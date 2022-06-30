@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use rand;
 use num::traits::Zero;
 use num::pow::Pow;
-use num::{BigRational, BigInt};
+use num::{BigRational, BigInt, ToPrimitive};
 
 type Env = HashMap<String, ast::Num>;
 
@@ -28,6 +28,8 @@ pub fn eval(expr: &Node, env: &Env) -> Result<ast::Num> {
                 And => bitand(a, b)?,
                 Or  => bitor(a, b)?,
                 Xor => bitxor(a, b)?,
+                LShift => bitshift(a, b)?,
+                RShift => bitshift(a, -b)?,
             };
             Ok(res)
         }
@@ -86,6 +88,19 @@ fn bitxor(a: ast::Num, b: ast::Num) -> Result<ast::Num> {
     match (to_int(&a), to_int(&b)) {
         (Some(ia), Some(ib)) => Ok((ia ^ ib).into()),
         _ => Err(simple_error!("Bitxor of non-integers"))?,
+    }
+}
+
+fn bitshift(a: ast::Num, b: ast::Num) -> Result<ast::Num> {
+    match (to_int(&a), to_int(&b).and_then(|i| i.to_isize())) {
+        (Some(ia), Some(ib)) => {
+            if ib > 0 {
+                Ok((ia << ib).into())
+            } else {
+                Ok((ia >> -ib).into())
+            }
+        }
+        _ => Err(simple_error!("Bit shift of non-integers"))?,
     }
 }
 
