@@ -7,10 +7,13 @@ use crate::ast::Num;
 
 #[derive(Logos, Debug, PartialEq, Clone)]
 pub enum Token<'input> {
+    #[token("plus", ignore(case))]
     #[token("+")]
     Plus,
+    #[token("minus", ignore(case))]
     #[token("-")]
     Minus,
+    #[token("times", ignore(case))]
     #[token("*")]
     Times,
     #[token("/")]
@@ -24,19 +27,19 @@ pub enum Token<'input> {
     #[token(")")]
     RParen,
     #[token("&")]
-    #[token("and")]
+    #[token("and", ignore(case))]
     And,
     #[token("|")]
-    #[token("or")]
+    #[token("or", ignore(case))]
     Or,
-    #[token("xor")]
+    #[token("xor", ignore(case))]
     Xor,
-    #[token("shift")]
+    #[token("shift", ignore(case))]
     #[token("<<")]
     LShift,
     #[token(">>")]
     RShift,
-    #[regex(r"\d*d\d+", |lex| parse_roll(lex.slice()))]
+    #[regex(r"\d*(d|D)\d+", |lex| parse_roll(lex.slice()))]
     Roll((i64, i64)),
     #[regex(r"-?[0-9]+", |lex| Num::from_integer(lex.slice().parse().unwrap()))]
     Digits(Num),
@@ -84,12 +87,12 @@ pub enum Token<'input> {
 
 fn parse_roll(roll: &str) -> (i64, i64) {
     lazy_static! {
-        static ref REGEX: Regex = Regex::new(r"^(\d*)d(\d+)$").unwrap();
+        static ref REGEX: Regex = Regex::new(r"^(\d*)(d|D)(\d+)$").unwrap();
     }
 
     let captures = REGEX.captures(roll).unwrap();
 
-    return (captures[1].parse().unwrap_or(1), captures[2].parse().unwrap());
+    return (captures[1].parse().unwrap_or(1), captures[3].parse().unwrap());
 }
 
 // lalrpop takes an Iterator with item = Result<(Loc, Tok, Loc), LexError>
