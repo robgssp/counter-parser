@@ -20,7 +20,7 @@
         };
 
         devShell = with pkgs; mkShell {
-          buildInputs = [ cargo rustc rustup rustfmt pre-commit rustPackages.clippy ];
+          buildInputs = [ cargo rustc rustfmt rls rustup pre-commit rustPackages.clippy ];
           RUST_SRC_PATH = rustPlatform.rustLibSrc;
         };
       });
