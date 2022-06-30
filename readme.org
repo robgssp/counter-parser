@@ -4,10 +4,10 @@ Did you just type a number? you're about to find out!
 
 #+begin_src shell
 
-  # to run over stdin
-  > cargo run -- --stdin
+  # interactive
+  > cargo run --bin repl
 
   # to listen on tcp 2369
-  > cargo run
+  > cargo run --bin web
 
 #+end_src
