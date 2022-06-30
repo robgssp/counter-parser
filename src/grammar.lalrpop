@@ -9,7 +9,7 @@ grammar<'input>(input: &'input str);
 
 pub TopLevel: Expr = {
     AnyFix,
-    <Term> ! => Box::new(Node::BadParse(<>)),
+    <AnyFix> ! => Box::new(Node::BadParse(<>)),
 }
 
 AnyFix: Expr = {
