@@ -99,7 +99,16 @@ fn parse_roll(roll: &str) -> (i64, i64) {
 }
 
 fn parse_radix(istring: &str, radix: u32) -> Num {
-    BigInt::parse_bytes(&istring.as_bytes()[2..], radix).unwrap().into()
+    let slice;
+    let sign: BigInt;
+    if istring.as_bytes()[0] == b'-' {
+        slice = &istring.as_bytes()[3..];
+        sign = (-1).into();
+    } else {
+        slice = &istring.as_bytes()[2..];
+        sign = 1.into();
+    }
+    (sign * BigInt::parse_bytes(slice, radix).unwrap()).into()
 }
 
 // lalrpop takes an Iterator with item = Result<(Loc, Tok, Loc), LexError>
