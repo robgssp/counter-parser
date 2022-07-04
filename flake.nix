@@ -13,10 +13,15 @@
         naersk-lib = pkgs.callPackage naersk { };
       in
         {
-          defaultPackage = naersk-lib.buildPackage ./.;
+          packages = {
+            counter-parser = naersk-lib.buildPackage ./.;
+            default = self.packages.${system}.counter-parser;
+          };
 
-          defaultApp = utils.lib.mkApp {
-            drv = self.defaultPackage."${system}";
+          apps = {
+            default = utils.lib.mkApp {
+              drv = self.defaultPackage."${system}";
+            };
           };
 
           devShell = with pkgs; mkShell {
@@ -28,7 +33,7 @@
       nixosModule = { config, lib, pkgs, ... }:
         with lib;
         let cfg = config.services.counter-parser;
-            pkg = self.defaultPackage.x86_64-linux;
+            pkg = self.packages.x86_64-linux.counter-parser;
         in {
           options.services.counter-parser = {
             enable = mkEnableOption "enables the counter-parser service";
