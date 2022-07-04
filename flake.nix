@@ -49,6 +49,7 @@
                 Restart = "always";
                 RestartSec = "1";
                 ExecStart = "${pkg}/bin/web";
+                TimeoutStopSec = "5s";
               };
             };
           };
